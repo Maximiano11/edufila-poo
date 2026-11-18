@@ -22,6 +22,8 @@ public class CmeiDAO {
             stmt.setString(5, cmei.getEndereco());
             stmt.executeUpdate();
             System.out.println("CMEI inserido com sucesso");
+        } catch (SQLException e) {
+            System.out.println("Erro ao inserir CMEI: " + e.getMessage());
         } finally {
             stmt.close();
             conexao.close();
