@@ -19,6 +19,7 @@ public class TelaCmei extends JFrame {
     private JTextField txtEndereco;
 
     private JButton btnSalvar;
+    private JButton btnAlterar;
     private JButton btnLimpar;
     private JButton btnBuscar;
     private JButton btnDeletar;
@@ -40,6 +41,7 @@ public class TelaCmei extends JFrame {
         txtEndereco = new JTextField(20);
 
         btnSalvar = new JButton("Salvar");
+        btnAlterar = new JButton("Alterar");
         btnLimpar = new JButton("Limpar");
         btnBuscar = new JButton("Buscar");
         btnDeletar = new JButton("Deletar");
@@ -59,6 +61,7 @@ public class TelaCmei extends JFrame {
 
         JPanel painelBotoes = new JPanel();
         painelBotoes.add(btnSalvar);
+        painelBotoes.add(btnAlterar);
         painelBotoes.add(btnLimpar);
         painelBotoes.add(btnBuscar);
         painelBotoes.add(btnDeletar);
@@ -69,7 +72,12 @@ public class TelaCmei extends JFrame {
         painel.add(painelBotoes, BorderLayout.SOUTH);
 
         String[] colunas = {"ID", "Nome", "Cidade", "Bairro", "Endereço"};
-        modeloTabela = new DefaultTableModel(colunas, 0);
+        modeloTabela = new DefaultTableModel(colunas, 0) {
+            @Override
+            public boolean isCellEditable(int linha, int coluna) {
+                return false;
+            }
+        };
         tabela = new JTable(modeloTabela);
         JScrollPane scroll = new JScrollPane(tabela);
 
@@ -77,6 +85,8 @@ public class TelaCmei extends JFrame {
         add(scroll, BorderLayout.CENTER);
 
         btnSalvar.addActionListener(e -> salvarCmei());
+        btnAlterar.addActionListener(e -> alterarCmei());
+        tabela.getSelectionModel().addListSelectionListener(e -> preencherCampos());
         btnLimpar.addActionListener(e -> limparCampos());
         btnBuscar.addActionListener(e -> buscarCmei());
         btnDeletar.addActionListener(e -> deletarCmei());
@@ -95,68 +105,137 @@ public class TelaCmei extends JFrame {
                 modeloTabela.addRow(linha);
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
+            mostrarErroBanco(e);
         }
+    }
+
+    private void preencherCampos() {
+        int linha = tabela.getSelectedRow();
+        if (linha == -1) {
+            return;
+        }
+        txtId.setText(modeloTabela.getValueAt(linha, 0).toString());
+        txtNome.setText(String.valueOf(modeloTabela.getValueAt(linha, 1)));
+        txtCidade.setText(String.valueOf(modeloTabela.getValueAt(linha, 2)));
+        txtBairro.setText(textoOuVazio(modeloTabela.getValueAt(linha, 3)));
+        txtEndereco.setText(textoOuVazio(modeloTabela.getValueAt(linha, 4)));
+    }
+
+    private String textoOuVazio(Object valor) {
+        if (valor == null) {
+            return "";
+        }
+        return valor.toString();
     }
 
     private void deletarCmei() {
         CmeiDAO dao = new CmeiDAO();
         try {
-            int id = Integer.parseInt(txtId.getText());
-            int resp = JOptionPane.showConfirmDialog(this, "Deseja confirmar a exclusão?",
+            int id = lerId();
+            Cmei cmei = dao.buscarCmeiPorId(id);
+            if (cmei == null) {
+                JOptionPane.showMessageDialog(this, "Nenhum CMEI encontrado com o id " + id);
+                return;
+            }
+            int resp = JOptionPane.showConfirmDialog(this, "Deseja excluir o " + cmei.getNome() + "?",
                     "Confirmar exclusão", JOptionPane.YES_NO_OPTION);
             if (resp == JOptionPane.YES_OPTION) {
                 dao.deletar(id);
+                JOptionPane.showMessageDialog(this, "CMEI excluído com sucesso");
+                limparCampos();
                 listarCmeis();
             }
-            limparCampos();
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Informe um id valido");
-        } catch (SQLException e) {
+        } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
+        } catch (SQLException e) {
+            mostrarErroBanco(e);
         }
     }
 
     private void buscarCmei() {
         CmeiDAO dao = new CmeiDAO();
         try {
-            Cmei cmei = dao.buscarCmeiPorId(Integer.parseInt(txtId.getText()));
+            int id = lerId();
+            Cmei cmei = dao.buscarCmeiPorId(id);
             if (cmei == null) {
-                JOptionPane.showMessageDialog(this, "CMEI não encontrado");
+                JOptionPane.showMessageDialog(this, "Nenhum CMEI encontrado com o id " + id);
                 return;
             }
             txtNome.setText(cmei.getNome());
             txtCidade.setText(cmei.getCidade());
             txtBairro.setText(cmei.getBairro());
             txtEndereco.setText(cmei.getEndereco());
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Informe um id valido");
-        } catch (SQLException e) {
+        } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
+        } catch (SQLException e) {
+            mostrarErroBanco(e);
         }
     }
 
     private void salvarCmei() {
         try {
-            Cmei cmei = new Cmei();
-            cmei.setId(Integer.parseInt(txtId.getText()));
-            cmei.setNome(txtNome.getText());
-            cmei.setCidade(txtCidade.getText());
-            cmei.setBairro(txtBairro.getText());
-            cmei.setEndereco(txtEndereco.getText());
-
+            Cmei cmei = lerCampos();
             CmeiDAO dao = new CmeiDAO();
+            if (dao.buscarCmeiPorId(cmei.getId()) != null) {
+                JOptionPane.showMessageDialog(this, "Já existe um CMEI com o id " + cmei.getId()
+                        + ". Use outro id ou clique em Alterar.");
+                return;
+            }
             dao.inserir(cmei);
             listarCmeis();
-            JOptionPane.showMessageDialog(this, "CMEI Salvo");
+            JOptionPane.showMessageDialog(this, "CMEI salvo com sucesso");
             limparCampos();
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Informe um id valido");
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
+            mostrarErroBanco(e);
         }
+    }
+
+    private void alterarCmei() {
+        try {
+            Cmei cmei = lerCampos();
+            CmeiDAO dao = new CmeiDAO();
+            if (dao.atualizar(cmei)) {
+                listarCmeis();
+                JOptionPane.showMessageDialog(this, "CMEI alterado com sucesso");
+                limparCampos();
+            } else {
+                JOptionPane.showMessageDialog(this, "Nenhum CMEI encontrado com o id " + cmei.getId());
+            }
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        } catch (SQLException e) {
+            mostrarErroBanco(e);
+        }
+    }
+
+    private Cmei lerCampos() {
+        Cmei cmei = new Cmei();
+        cmei.setId(lerId());
+        cmei.setNome(txtNome.getText());
+        cmei.setCidade(txtCidade.getText());
+        cmei.setBairro(txtBairro.getText().trim());
+        cmei.setEndereco(txtEndereco.getText().trim());
+        return cmei;
+    }
+
+    private int lerId() {
+        String texto = txtId.getText().trim();
+        if (texto.isEmpty()) {
+            throw new IllegalArgumentException("Informe o id do CMEI");
+        }
+        try {
+            return Integer.parseInt(texto);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("O id deve ser um número inteiro (ex.: 1, 2, 3)");
+        }
+    }
+
+    private void mostrarErroBanco(SQLException e) {
+        JOptionPane.showMessageDialog(this, "Erro ao acessar o banco de dados.\n"
+                + "Verifique se o PostgreSQL está rodando.\n\nDetalhe: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
     private void limparCampos() {
@@ -165,6 +244,7 @@ public class TelaCmei extends JFrame {
         txtCidade.setText("");
         txtBairro.setText("");
         txtEndereco.setText("");
+        tabela.clearSelection();
         txtId.requestFocus();
     }
 }

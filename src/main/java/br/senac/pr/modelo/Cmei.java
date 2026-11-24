@@ -11,9 +11,9 @@ public class Cmei {
     }
 
     public Cmei(int id, String nome, String cidade, String bairro, String endereco) {
-        this.id = id;
+        setId(id);
         setNome(nome);
-        this.cidade = cidade;
+        setCidade(cidade);
         this.bairro = bairro;
         this.endereco = endereco;
     }
@@ -23,6 +23,9 @@ public class Cmei {
     }
 
     public void setId(int id) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("O id deve ser um número maior que zero");
+        }
         this.id = id;
     }
 
@@ -32,9 +35,12 @@ public class Cmei {
 
     public void setNome(String nome) {
         if (nome == null || nome.isBlank()) {
-            throw new IllegalArgumentException("Nome não pode ser vazio");
+            throw new IllegalArgumentException("O nome do CMEI é obrigatório");
         }
-        this.nome = nome;
+        if (nome.length() > 100) {
+            throw new IllegalArgumentException("O nome pode ter no máximo 100 caracteres");
+        }
+        this.nome = nome.trim();
     }
 
     public String getCidade() {
@@ -42,7 +48,10 @@ public class Cmei {
     }
 
     public void setCidade(String cidade) {
-        this.cidade = cidade;
+        if (cidade == null || cidade.isBlank()) {
+            throw new IllegalArgumentException("A cidade é obrigatória");
+        }
+        this.cidade = cidade.trim();
     }
 
     public String getBairro() {

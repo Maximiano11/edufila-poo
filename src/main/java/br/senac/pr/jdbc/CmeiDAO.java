@@ -47,6 +47,24 @@ public class CmeiDAO {
         return null;
     }
 
+    public boolean atualizar(Cmei cmei) throws SQLException {
+        String sql = "UPDATE cmei SET nome=?, cidade=?, bairro=?, endereco=? WHERE id=?";
+        Connection conexao = Conexao.conectar();
+        PreparedStatement stmt = conexao.prepareStatement(sql);
+        try {
+            stmt.setString(1, cmei.getNome());
+            stmt.setString(2, cmei.getCidade());
+            stmt.setString(3, cmei.getBairro());
+            stmt.setString(4, cmei.getEndereco());
+            stmt.setInt(5, cmei.getId());
+            int resp = stmt.executeUpdate();
+            return resp > 0;
+        } finally {
+            stmt.close();
+            conexao.close();
+        }
+    }
+
     public boolean deletar(int id) throws SQLException {
         String sql = "DELETE FROM cmei WHERE id=?";
         Connection conexao = Conexao.conectar();
