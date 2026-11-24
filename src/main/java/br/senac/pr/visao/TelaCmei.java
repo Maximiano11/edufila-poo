@@ -148,7 +148,11 @@ public class TelaCmei extends JFrame {
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
         } catch (SQLException e) {
-            mostrarErroBanco(e);
+            if ("23503".equals(e.getSQLState())) {
+                JOptionPane.showMessageDialog(this, "Não é possível excluir este CMEI porque ele possui vagas cadastradas.");
+            } else {
+                mostrarErroBanco(e);
+            }
         }
     }
 
